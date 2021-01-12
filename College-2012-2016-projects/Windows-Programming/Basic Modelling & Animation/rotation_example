@@ -1,0 +1,145 @@
+#include<windows.h>
+#include<string>
+#include<iostream>
+#include<math.h>
+
+using namespace std;
+
+LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
+POINT Rotate(float cx,float cy,float angle,POINT p);
+void Rotate(float cx,float cy,float angle,POINT old[],POINT fnew[]);
+
+int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszArgs,int nCmdShow)
+{
+    HWND hwnd;
+    MSG messages;
+    WNDCLASS wincl;
+
+    wincl.hInstance = hInstance;
+    wincl.lpszClassName = TEXT("ABC");
+    wincl.lpfnWndProc = WindowProcedure;
+    wincl.style = CS_HREDRAW;
+    wincl.hIcon =  LoadIcon(NULL,IDI_ERROR);
+    wincl.hCursor = LoadCursor(NULL,IDC_CROSS);
+    wincl.lpszMenuName = NULL;
+    wincl.cbClsExtra = 0;
+    wincl.cbWndExtra = 0;
+    wincl.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
+
+if(!RegisterClass(&wincl))
+    {
+        cout<<"wincl not registed";
+          return 0;
+    }
+    hwnd = CreateWindow (
+           TEXT("ABC"),
+           TEXT("Multiplication"),
+          WS_OVERLAPPEDWINDOW | WS_HSCROLL |WS_VSCROLL,
+           100,
+           100,
+           1000,
+           600,
+           NULL,
+           NULL,
+           hInstance,
+           NULL
+           );
+
+    ShowWindow (hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+
+    while (GetMessage (&messages, NULL, 0, 0))
+    {
+        TranslateMessage(&messages);
+        DispatchMessage(&messages);
+    }
+    return messages.wParam;
+}
+
+int x,y,size;
+TCHAR text[20];
+int angle = 30;
+POINT old[5] = {100,100,200,100,200,200,100,200,100,100};
+POINT fnew[5];
+
+
+LRESULT CALLBACK WindowProcedure(HWND handle, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+
+    switch (msg)
+    {
+    case WM_MOUSEMOVE:
+        {
+
+            HDC hdc=GetDC(handle);
+            x=LOWORD(lParam);
+            y=HIWORD(lParam);
+            size=wsprintf(text,TEXT("Mouse %i %i   "),x,y);
+            TextOut(hdc,0,0,text,size);
+            ReleaseDC(handle,hdc);
+
+            break;
+        }
+    case WM_KEYDOWN:
+        {
+             int key = LOWORD(wParam);
+            cout<<key<<endl;
+            HDC hdc = GetDC(handle);
+            if(key == 38)
+            {
+
+            Rotate(200.0,200.0,angle,old,fnew);
+
+            HPEN pen = CreatePen(PS_SOLID,1,RGB(255,255,255));
+
+            SelectObject(hdc,pen);
+            Polygon(hdc,old,5);
+
+            pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+
+            SelectObject(hdc,pen);
+            Polygon(hdc,fnew,5);
+
+            for(int i=0;i<5;i++)
+            {
+                old[i].x = fnew[i].x;
+                old[i].y = fnew[i].y;
+                cout<<old[i].x<<"and"<<old[i].y<<endl;
+            }
+
+            }
+
+            ReleaseDC(handle,hdc);
+
+
+            break;
+        }
+
+    case WM_PAINT:
+        {
+
+            break;
+        }
+          case WM_DESTROY:
+                PostQuitMessage (0);
+            break;
+
+          default:
+                return DefWindowProc (handle, msg, wParam, lParam);
+    }
+}
+
+/**<  */
+void Rotate(float ox,float oy,float angle,POINT old[],POINT fnew[])
+{
+    float c= cos((angle*3.14)/180);
+    float s= sin((angle*3.14)/180);
+
+    for(int i=0;i<5;i++)
+    {
+
+        fnew[i].x = c*(old[i].x - ox) - s*(old[i].y-oy) + ox;
+        fnew[i].y = s*(old[i].x - ox) + c*(old[i].y-oy) + oy;
+
+    }
+}

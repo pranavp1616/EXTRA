@@ -1,0 +1,184 @@
+
+// Draw Bezier splines 
+// gcc spline.c -lm -lglut -lGLU -lGL
+
+#include <stdio.h>
+#include <GL/glut.h>
+
+
+typedef struct
+{
+        GLint x;
+        GLint y;
+} GLPOINT;
+
+
+static int wHeight = 0;
+static GLPOINT p[4];
+
+
+void DrawControlPoints();
+void DrawBezierSpline();
+
+float GetX(float t);
+float GetY(float t);
+
+// open gl functions
+void DisplayFunc();
+void MouseFunc(int button,int state,int x,int y);
+void KeyboardFunc(unsigned char key,int x,int y);
+void Init();
+
+// algo functions
+
+void SetPixel(int x,int y);
+
+int main(int argc,char* argv[])
+{
+        glutInit(&argc,argv);
+        glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+        glutInitWindowPosition(100,100);
+        glutInitWindowSize(600,600);
+        glutCreateWindow("Translation");
+        
+        wHeight = glutGet(GLUT_WINDOW_HEIGHT);
+        
+        glutDisplayFunc(DisplayFunc);
+        glutMouseFunc(MouseFunc);
+        glutKeyboardFunc(KeyboardFunc);
+        
+        Init();
+        glutMainLoop();
+        return 0;
+        
+}
+
+
+void MouseFunc(int button,int state,int x,int y)
+{
+        static int count;
+        
+        if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+        {
+                p[count].x=x;
+                p[count].y=wHeight-y;
+                count++;
+        }
+        if(count == 4)
+        {
+                count=0;
+                
+                DrawControlPoints();
+                DrawBezierSpline();
+                
+        }
+}
+void KeyboardFunc(unsigned char key,int x,int y)
+{
+        
+}
+
+
+
+void DisplayFunc()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+	glFlush();
+}
+
+void Init()
+{
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0,600, 0.0, 600);
+	
+}
+
+
+void SetPixel(int x,int y)
+{
+        glColor3f(0,0,0);
+        glBegin(GL_POINTS);
+                glVertex2i(x,y);
+        glEnd();
+        glFlush();
+        
+        
+}
+
+void spline_init()
+{
+        p[0].x = 100;
+        p[0].y = 100;
+        
+        p[1].x = 200;
+        p[1].y = 300;
+        
+        p[2].x=300;
+        p[2].y=50;
+        
+        p[3].x=400;
+        p[3].y=100;
+        
+        
+}
+
+void DrawControlPoints()
+{
+        glColor3f(0,1,0);
+        glBegin(GL_LINES);
+                glVertex2i(p[0].x,p[0].y);
+                glVertex2i(p[1].x,p[1].y);
+                
+                glVertex2i(p[1].x,p[1].y);
+                glVertex2i(p[2].x,p[2].y);
+                
+                glVertex2i(p[2].x,p[2].y);
+                glVertex2i(p[3].x,p[3].y);
+                
+        glEnd();
+        glFlush();
+}
+
+void DrawBezierSpline()
+{
+        float t=0.0; 
+        int x,y;
+        
+        printf("\nTest\n");
+        for(;t<=1.0;)
+        {
+                x=GetX(t);
+                y=GetY(t);
+                
+                SetPixel(x,y);
+                
+                printf("%d %d  and  t = %f\n",x,y,t);
+                t=t+0.001;
+        }
+}
+
+float GetX(float t)
+{
+        float a=(1-t)*(1-t)*(1-t)*p[0].x;
+        float b=3*t*(1-t)*(1-t)*p[1].x ;
+        float c=3*t*t*(1-t)*p[2].x;
+        float d=t*t*t*p[3].x;
+        
+       return  a+b+c+d; 
+    
+         
+}
+
+float GetY(float t)
+{
+        float a=(1-t)*(1-t)*(1-t)*p[0].y;
+        float b=3*t*(1-t)*(1-t)*p[1].y ;
+        float c=3*t*t*(1-t)*p[2].y;
+        float d=t*t*t*p[3].y;
+        
+       return  a+b+c+d; 
+    
+         
+}

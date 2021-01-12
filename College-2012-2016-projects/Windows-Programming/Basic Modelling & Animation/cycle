@@ -1,0 +1,320 @@
+#include<windows.h>
+#include<string>
+#include<iostream>
+#include<math.h>
+
+using namespace std;
+
+LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
+POINT Rotate(POINT pt,float ox,float oy,float angle);
+
+
+int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszArgs,int nCmdShow)
+{
+    HWND hwnd;
+    MSG messages;
+    WNDCLASS wincl;
+
+    wincl.hInstance = hInstance;
+    wincl.lpszClassName = TEXT("ABC");
+    wincl.lpfnWndProc = WindowProcedure;
+    wincl.style = CS_HREDRAW;
+    wincl.hIcon =  LoadIcon(NULL,IDI_ERROR);
+    wincl.hCursor = LoadCursor(NULL,IDC_CROSS);
+    wincl.lpszMenuName = NULL;
+    wincl.cbClsExtra = 0;
+    wincl.cbWndExtra = 0;
+    wincl.hbrBackground = (HBRUSH) GetStockObject(WHITE_BRUSH);
+
+if(!RegisterClass(&wincl))
+    {
+        cout<<"wincl not registed";
+          return 0;
+    }
+    hwnd = CreateWindow (
+           TEXT("ABC"),
+           TEXT("Multiplication"),
+          WS_OVERLAPPEDWINDOW | WS_HSCROLL |WS_VSCROLL,
+           100,
+           100,
+           1000,
+           600,
+           NULL,
+           NULL,
+           hInstance,
+           NULL
+           );
+
+    ShowWindow (hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+
+    while (GetMessage (&messages, NULL, 0, 0))
+    {
+        TranslateMessage(&messages);
+        DispatchMessage(&messages);
+    }
+    return messages.wParam;
+}
+
+int x,y,size;
+TCHAR text[20];
+int angle = 40;
+int x_init=150;
+int y_init= 150;
+
+POINT l1[8][2] = {{x_init,y_init,x_init-50,y_init},
+                    {x_init,y_init,x_init+50,y_init},
+                    {x_init,y_init,x_init,y_init-50},
+                    {x_init,y_init,x_init,y_init+50},
+                    {x_init,y_init,x_init-35,y_init-35},
+                    {x_init,y_init,x_init-35,y_init+35},
+                    {x_init,y_init,x_init+35,y_init-35},
+                    {x_init,y_init,x_init+35,y_init+35}};
+
+int c_size=150;
+
+POINT body[2]={x_init+10,y_init-60 ,x_init+c_size-10,y_init-65};
+POINT body2[2]={x_init+10,y_init-65,x_init+75,y_init};
+POINT body3[2]={x_init+c_size-10,y_init-65,x_init+75,y_init};
+POINT b_handle[2]={x_init,y_init,x_init+20,y_init-70};
+POINT f_handle[2]={x_init+c_size,y_init,x_init+c_size-20,y_init-80};
+
+POINT ped[2]={x_init+75,y_init,x_init+75,y_init-35};
+
+POINT ped2[2]={x_init+75,y_init,x_init+75,y_init+35};
+
+POINT l2[8][2] = {{x_init+c_size,y_init,x_init-50+c_size,y_init},
+                    {x_init+c_size,y_init,x_init+50+c_size,y_init},
+                    {x_init+c_size,y_init,x_init+c_size,y_init-50},
+                    {x_init+c_size,y_init,x_init+c_size,y_init+50},
+                    {x_init+c_size,y_init,x_init-35+c_size,y_init-35},
+                    {x_init+c_size,y_init,x_init-35+c_size,y_init+35},
+                    {x_init+c_size,y_init,x_init+35+c_size,y_init-35},
+                    {x_init+c_size,y_init,x_init+35+c_size,y_init+35}};
+HPEN pen;
+HDC hdc;
+
+LRESULT CALLBACK WindowProcedure(HWND handle, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+
+    switch (msg)
+    {
+    case WM_CREATE:
+        {
+            break;
+        }
+    case WM_MOUSEMOVE:
+        {
+
+            HDC hdc=GetDC(handle);
+            x=LOWORD(lParam);
+            y=HIWORD(lParam);
+            size=wsprintf(text,TEXT("Mouse %i %i   "),x,y);
+            TextOut(hdc,0,0,text,size);
+            ReleaseDC(handle,hdc);
+
+            break;
+        }
+    case WM_KEYDOWN:
+        {
+            int key = LOWORD(wParam);
+            hdc = GetDC(handle);
+            RECT rect;
+            GetClientRect(handle,&rect);
+            FillRect(hdc,&rect,WHITE_BRUSH);
+            if(key == 37)
+            {
+                x_init=x_init - 1;
+                for(int i=0;i<2;i++)
+                {
+                    body[i].x--;
+                    body2[i].x--;
+                    body3[i].x--;
+                    b_handle[i].x--;
+                    f_handle[i].x--;
+                }
+                // wheel
+                pen = CreatePen(PS_SOLID,7,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init-50,y_init-50,x_init+50,y_init+50);
+                // rim
+                pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                for(int i=0;i<8;i++)
+                {
+                    for(int j=0;j<2;j++)
+                        {
+                           Polyline(hdc,l1[i],2);
+                           l1[i][j]=Rotate(l1[i][j],x_init,y_init,angle);
+                        }
+                }
+                // wheel 2
+
+                pen = CreatePen(PS_SOLID,7,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init-50+c_size,y_init-50,x_init+50+c_size,y_init+50);
+                // rim
+                pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                for(int i=0;i<8;i++)
+                {
+                    for(int j=0;j<2;j++)
+                        {
+                           Polyline(hdc,l2[i],2);
+                           l2[i][j]=Rotate(l2[i][j],x_init+c_size,y_init,angle);
+
+                        }
+                }
+                // body
+                pen = CreatePen(PS_SOLID,7,RGB(255,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,body,2);
+                Polyline(hdc,body2,2);
+                Polyline(hdc,body3,2);
+                Polyline(hdc,b_handle,2);
+                Polyline(hdc,f_handle,2);
+                // seat and light
+                pen = CreatePen(PS_SOLID,4,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Chord(hdc,x_init+c_size+10-20,y_init-75-10,x_init+c_size+10+20,y_init-75+10,x_init+c_size+10,y_init-75-10,
+                      x_init+c_size+10,y_init-75+10
+                      );
+                pen = CreatePen(PS_SOLID,3,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,ped2,2);
+                ped2[1] = Rotate(ped2[1],x_init+75,y_init,-angle);
+                ped2[0].x--;
+                ped2[1].x--;
+                pen = CreatePen(PS_SOLID,4,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init+20-20,y_init-70-5,x_init+20+20,y_init-70+5);
+                Ellipse(hdc,x_init+75-20,y_init-20,x_init+75+20,y_init+20);
+                MoveToEx(hdc,x_init+75,y_init-20,NULL);
+                LineTo(hdc,x_init,y_init);
+                MoveToEx(hdc,x_init+75,y_init+20,NULL);
+                LineTo(hdc,x_init,y_init);
+                pen = CreatePen(PS_SOLID,3,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,ped,2);
+                ped[1] = Rotate(ped[1],x_init+75,y_init,-angle);
+                ped[0].x--;
+                ped[1].x--;
+            }
+// ***************************************************************************************
+            if(key == 39)
+            {
+
+                x_init=x_init + 1;
+                for(int i=0;i<2;i++)
+                {
+                    body[i].x++;
+                    body2[i].x++;
+                    body3[i].x++;
+                    b_handle[i].x++;
+                    f_handle[i].x++;
+                }
+                /////////
+                // WHEEL 1
+                pen = CreatePen(PS_SOLID,7,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init-50,y_init-50,x_init+50,y_init+50);
+                pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                // rim
+                for(int i=0;i<8;i++)
+                {
+                    for(int j=0;j<2;j++)
+                        {
+                           Polyline(hdc,l1[i],2);
+                           l1[i][j]=Rotate(l1[i][j],x_init,y_init,-angle);
+
+                        }
+                }
+                /////////////////////////////////////////////////////////////////////////////
+                // WHEEL 2
+                pen = CreatePen(PS_SOLID,7,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init-50+c_size,y_init-50,x_init+50+c_size,y_init+50);
+                pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                // rim
+                for(int i=0;i<8;i++)
+                {
+                    for(int j=0;j<2;j++)
+                        {
+                           Polyline(hdc,l2[i],2);
+                           l2[i][j]=Rotate(l2[i][j],x_init+c_size,y_init,-angle);
+
+                        }
+                }
+                // body
+                 pen = CreatePen(PS_SOLID,7,RGB(255,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,body,2);
+                Polyline(hdc,body2,2);
+                Polyline(hdc,body3,2);
+                Polyline(hdc,b_handle,2);
+                Polyline(hdc,f_handle,2);
+                pen = CreatePen(PS_SOLID,4,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Chord(hdc,x_init+c_size+10-20,y_init-75-10,x_init+c_size+10+20,y_init-75+10,x_init+c_size+10,y_init-75-10,
+                      x_init+c_size+10,y_init-75+10
+                      );
+                Ellipse(hdc,x_init+20-20,y_init-70-5,x_init+20+20,y_init-70+5);
+                pen = CreatePen(PS_SOLID,3,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,ped2,2);
+                ped2[1] = Rotate(ped2[1],x_init+75,y_init,angle);
+                ped2[0].x++;
+                ped2[1].x++;
+                pen = CreatePen(PS_SOLID,4,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Ellipse(hdc,x_init+75-20,y_init-20,x_init+75+20,y_init+20);
+                MoveToEx(hdc,x_init+75,y_init-20,NULL);
+                LineTo(hdc,x_init,y_init);
+                MoveToEx(hdc,x_init+75,y_init+20,NULL);
+                LineTo(hdc,x_init,y_init);
+                pen = CreatePen(PS_SOLID,3,RGB(0,0,0));
+                SelectObject(hdc,pen);
+                Polyline(hdc,ped,2);
+                ped[1] = Rotate(ped[1],x_init+75,y_init,angle);
+                ped[0].x++;
+                ped[1].x++;
+            }
+            //****************************************************************************
+                ReleaseDC(handle,hdc);
+
+            break;
+        }
+
+    case WM_PAINT:
+        {
+
+            break;
+        }
+          case WM_DESTROY:
+                PostQuitMessage (0);
+            break;
+
+          default:
+                return DefWindowProc (handle, msg, wParam, lParam);
+    }
+}
+
+
+POINT Rotate(POINT point,float ox,float oy,float angle)
+{
+
+        float c= cos((angle*3.14)/180);
+        float s= sin((angle*3.14)/180);
+
+        POINT temp;
+
+
+        temp.x = (float)(c*(point.x - ox) - s*(point.y-oy) + ox);
+        temp.y = (float)(s*(point.x - ox) + c*(point.y-oy) + oy);
+
+        point.x = temp.x;
+        point.y = temp.y;
+        return point;
+}

@@ -1,0 +1,200 @@
+//
+// Midpoint Theorem
+// -lm -lglut -lGL -GLU
+#include <stdio.h>
+#include <math.h>
+#include <GL/glut.h>
+#define MAX 500
+
+typedef struct 
+{
+        GLint x;
+        GLint y;        
+}GLPOINT;
+
+static int wHeight;
+GLPOINT array[MAX];
+void ClearArray();
+
+void Init();
+void DisplayFunc();
+void MouseFunc(int button,int state,int x,int y);
+void SetPixel(int x,int y);
+void MPT(GLPOINT click_point[2]);
+void MPT_util(float radius);
+float Distance(GLPOINT points[2]);
+
+int main(int argc,char *argv[])
+{
+        glutInit(&argc,argv);
+        glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+        glutInitWindowPosition(100,100);
+        glutInitWindowSize(640,480);
+        glutCreateWindow("MPT_advaced");
+        
+        wHeight = glutGet(GLUT_WINDOW_HEIGHT);
+        
+        Init();
+        glutDisplayFunc(DisplayFunc);
+        glutMouseFunc(MouseFunc);
+        glutMainLoop();
+}
+
+void SetPixel(int x,int y)
+{
+        glColor3f(0,0,0);
+        glBegin(GL_POINTS);
+                glVertex2i(x,y);
+        glEnd();
+        glFlush();
+}
+void Init()
+{
+	glClearColor(1.0, 1.0, 1.0, 0.0);
+	glColor3f(0.5f, 0.5f, 0.5f);
+	glPointSize(1.0);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(0.0,640.0,0.0,480.0);
+}
+
+void DisplayFunc()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(0.0f, 1.0f, 0.0f);
+        glFlush();
+}
+
+void MouseFunc(int button,int state,int x,int y)
+{
+        static int click_count;
+        static GLPOINT click_point[2];
+        
+        if(button==GLUT_LEFT_BUTTON && state==GLUT_DOWN)
+        {
+                click_point[click_count].x = x;
+                click_point[click_count].y = y;
+                click_count++;
+        }
+        
+        if(click_count==2)
+        {
+                click_count = 0;
+                MPT(click_point);
+        }       
+}
+
+float Distance(GLPOINT points[2])
+{
+        int x1=points[0].x;
+        int y1=points[0].y;
+        int x2=points[1].x;
+        int y2=points[1].y;
+        
+        return sqrt ( ((x1-x2)*(x1-x2)) + ((y1-y2)*(y1-y2)) );
+}
+void ClearArray()
+{
+        int i;
+        for(i=0;i<MAX;i++)
+        {
+                array[i].x=array[i].y=0;
+        }
+}
+void MPT(GLPOINT click_point[2])
+{
+        float radius = Distance(click_point);
+        
+        MPT_util(radius);
+        
+        int i=0;
+        int c_x=click_point[0].x;
+        int c_y=click_point[0].y;
+
+        printf("centre: %d %d\n",c_x,c_y);        
+        printf("radius:  %2f\n",radius);
+        
+        // 1st quadrant
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+array[i].x,wHeight- c_y+array[i].y);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+array[i].y,wHeight- c_y+array[i].x);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        
+        // 2nd quadrant
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+array[i].x,wHeight- c_y+-array[i].y);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+array[i].y,wHeight- c_y+-array[i].x);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        
+        // 3rd quadrant
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+-array[i].x,wHeight- c_y+array[i].y);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+-array[i].y,wHeight- c_y+array[i].x);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        
+        // 4th quadrant
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+-array[i].x,wHeight- c_y+-array[i].y);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        for(i=0;i<MAX;i++)
+        {
+                SetPixel(c_x+-array[i].y,wHeight- c_y+-array[i].x);
+                if(array[i].x==array[i].y)
+                        break;
+        }
+        ClearArray();
+}
+
+void MPT_util(float radius)
+{
+        int i=0;
+        int x=0;
+        int y=radius;
+        int p = radius-1;
+        
+        while(x<=y)
+        {
+                if(p<0)
+                {
+                        array[i].x = x;
+                        array[i].y = y;
+                        p = p + 2*x+1;
+                }
+                else
+                {
+                        y--;
+                        array[i].x=x;
+                        array[i].y=y;
+                        p = p + 2*x+1 - 2*y;
+                }
+                x++;
+                i++;
+        }
+}	

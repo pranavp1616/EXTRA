@@ -1,0 +1,15 @@
+{
+  "manifest_version": 2,
+
+  "name": "My Test Chrome Extension",
+  "description": "Just calls alert function when you click button",
+  "version": "1.0",
+
+  "browser_action": {
+   "default_icon": "icon.png",
+   "default_popup": "popup.html"
+  },
+  "permissions": [
+   "activeTab"
+   ]
+}

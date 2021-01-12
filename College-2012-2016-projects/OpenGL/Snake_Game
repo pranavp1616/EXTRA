@@ -1,0 +1,126 @@
+// SNAKE GAME
+
+#include <stdio.h>
+#include <GL/glut.h>
+#include <time.h>
+
+static int wHeight;
+static int rotation_angle=10;
+static float snake_x,snake_y;
+static float ball_x=0.6,ball_y=0.6;
+static float collision_offset = 0.04;
+static int speed=10;
+static int score;
+void Init()
+{
+        printf("Snake Game\n");
+        
+        glClearColor(1,1,1,0);
+        glShadeModel(GL_FLAT);
+        
+        srand(time(NULL));
+}
+
+
+void CollisionCheck()
+{        
+        if( (ball_x <= snake_x+collision_offset && ball_x>=snake_x-collision_offset) 
+        && (ball_y<=snake_y+collision_offset && ball_y>= snake_y - collision_offset) )
+                {
+                        float new_x = rand()%10;
+                        float new_y = rand()%10;
+                        int alter = rand()%4;
+                        
+                        ball_x = new_x/10;
+                        ball_y = new_y/10;
+                        
+                        if(alter%4==0)
+                                ball_x = -ball_x;
+                             
+                        if(alter%4==1)
+                                ball_y = -ball_y;
+                                
+                        score++;
+                        printf("Score : %d\n",score);
+        
+                }
+}
+void display()
+{       
+        glClear (GL_COLOR_BUFFER_BIT);
+        glColor3f(0,0,0);
+        
+        // My code beign
+        
+            
+                
+        // my code end
+        glutSwapBuffers();
+}
+
+void IdleFunc()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+        
+        // begin
+        
+        glColor3f(0,1,0);
+                // ball
+        glPushMatrix();
+                glTranslatef(ball_x,ball_y,0);
+                glRotatef(rotation_angle,0,0,1);
+                glutWireSphere(0.05,10,4);
+        glPopMatrix();
+        
+        glColor3f(1,0,0);
+                // snake
+         glPushMatrix();
+                glTranslatef(snake_x,snake_y,0);
+                glRotatef(rotation_angle,0,1,1);
+                glutWireSphere(0.05,8,4);
+         glPopMatrix();
+                
+        CollisionCheck();
+        //end 
+        rotation_angle = (rotation_angle+10) % 360;
+        glutSwapBuffers();
+}
+
+void keyboard(unsigned char key,int x,int y)
+{
+        if(key=='d')
+                {
+                        snake_x=snake_x+0.01*speed;
+                }
+        if(key=='a')
+                {
+                        snake_x=snake_x-0.01*speed;
+                }
+        if(key=='s')
+                {
+                        snake_y=snake_y-0.01*speed;
+                }
+        if(key=='w')
+                {
+                        snake_y=snake_y+0.01*speed;
+                }
+                
+                
+        glutPostRedisplay();
+}
+
+int main(int argc,char* argv[])
+{
+        glutInit(&argc,argv);
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+        glutInitWindowSize(600,600);
+        glutInitWindowPosition(150,150);
+        glutCreateWindow("Snake");
+        
+        Init();
+        glutDisplayFunc(display);
+        glutKeyboardFunc(keyboard);
+        glutIdleFunc(IdleFunc);
+        glutMainLoop();
+        return 0;
+}

@@ -1,0 +1,346 @@
+#include<windows.h>
+#include<mmsystem.h>
+#include<iostream>
+#include<stdlib.h>
+using namespace std;
+// GLOBAL VARIABLES
+HWND handle;
+PAINTSTRUCT pStruct;
+HPEN pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+HBRUSH brush = CreateSolidBrush(RGB(0,0,0));
+COLORREF col;
+HDC  hdc;
+int speed = 10; // ball speed
+int bat_speed=40;
+int angle = 60; // angle of deflection on collision
+int x_ball = 500;
+int y_ball = 300;
+int x_left = 6;
+int y_left = 300;
+int x_right = 976;
+int y_right = 300;
+int bat_size=60;
+int ball_radius = 10;
+int x_direction = -1;
+int y_direction = -1;
+int pl_left_score = 0; // player 1 score
+int pl_right_score = 0; // player 2 score
+bool multiplayer = true;
+bool game_start  = false;
+int time=0;
+POINT net[4]={460,10,480,0,480,560,460,550};
+int random_diff = 10;
+HANDLE hThread;
+TCHAR tick_sound[100]=TEXT("c:/Users/Pranav/Desktop/Visual Programming Code/Ping Pong/pingpong.wav");
+// ******************************************************
+// FUNCTIONS
+LRESULT CALLBACK WindowProcedure(HWND handle,UINT msg,WPARAM wParam,LPARAM lParam);
+void MoveBall();  // To move ball
+void UpdateBall(); // updates ball coordinates
+void CheckHit(); // for each movement check for collision
+DWORD WINAPI PlayHitSound(LPVOID lpParam);
+// *******************************
+int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR l,int nCmdShow)
+{
+
+    MSG messages;
+    WNDCLASS winclass;
+    winclass.hInstance = hInstance;
+    winclass.lpszClassName = TEXT("PING PONG");
+    winclass.lpfnWndProc = WindowProcedure;
+    winclass.style = CS_HREDRAW;
+    winclass.hIcon = LoadIcon(NULL,IDI_APPLICATION);
+    winclass.hCursor = LoadCursor(NULL,IDC_ARROW);
+    winclass.lpszMenuName = NULL;
+    winclass.cbClsExtra = 0;
+    winclass.cbWndExtra = 0;
+    winclass.hbrBackground = (HBRUSH) WHITE_BRUSH;
+    if(!RegisterClass(&winclass))
+    {
+        cout<<"\nNot registered properly\n";\
+        return 0;
+    }
+    handle = CreateWindow(TEXT("PING PONG"),TEXT("PING PONG"),WS_OVERLAPPEDWINDOW,100,100,1000,600,NULL,NULL,hInstance,NULL);
+    ShowWindow(handle,nCmdShow);
+    while(true)
+    {
+            if(PeekMessageA(&messages,NULL,0,0,PM_REMOVE))
+            {
+                DispatchMessage(&messages);
+            }
+            if(game_start == true)
+            {
+                MoveBall();
+                time=GetTickCount();
+                while(GetTickCount()-time < 5);
+                InvalidateRect(handle,NULL,true);
+            }
+    }
+    return messages.wParam;
+}
+// ******************************************************
+LRESULT CALLBACK WindowProcedure(HWND handle, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_KEYDOWN:
+        {
+            int key=LOWORD(wParam);
+            if(game_start==true)
+            {
+                if(key == 38 && multiplayer == true )   // up arrow
+                {
+                    y_right-=bat_speed;
+                    if(y_right <= bat_size+10)
+                        y_right = bat_size+10;
+
+                }
+                else if(key == 40 && multiplayer == true ) // down arrow
+                {
+                    y_right+=bat_speed;
+                    if(y_right >= (430+ bat_size) )
+                        y_right = 430+ bat_size;
+
+                }
+                else if(key == 87) // w
+                {
+                    y_left-=bat_speed;
+                    if(y_left <= bat_size+10)
+                        y_left = bat_size+10;
+
+                }
+                else if(key == 83) // s
+                {
+                    y_left+=bat_speed;
+                    if(y_left >= (430+ bat_size) )
+                        y_left = 430 + bat_size;
+
+                }
+            } // inside game play
+
+            if(key== 32) // space
+                {
+                    game_start=!game_start;
+                }
+            else if(key == 77) // m
+                {
+                    multiplayer = true;
+                }
+            else if(key == 79) // o
+                {
+                multiplayer = false;
+                }
+            else if(key == 82)
+            {
+                // restart
+                pl_left_score = 0;
+                pl_right_score = 0;
+                x_ball = 500;
+                y_ball = 300;
+                x_left = 6;
+                y_left = 300;
+                x_right = 976;
+                y_right = 300;
+                x_direction = y_direction = -1;
+                game_start = true;
+            }
+           break;
+        }
+        case WM_PAINT:
+        {
+            hdc = BeginPaint(handle,&pStruct);
+            brush = CreateSolidBrush(RGB(0,102,20)); // 0 102 51
+            SelectObject(hdc,brush);
+            Rectangle(hdc,0,0,1000,600); // Repaint rectangle
+            pen = CreatePen(PS_SOLID,5,RGB(255,255,255));
+            SelectObject(hdc,pen);
+            MoveToEx(hdc,0,300,NULL);
+            LineTo(hdc,1000,300); // centre horizontal line
+            brush=CreateSolidBrush(RGB(153,100,0));
+            pen = CreatePen(PS_SOLID,2,RGB(0,0,0));
+            SelectObject(hdc,pen);
+            SelectObject(hdc,brush);
+            Rectangle(hdc,0,0,1000,10); // top border
+            Rectangle(hdc,0,550,1000,562); // bottom border
+            char text[3];
+            SetBkColor(hdc,RGB(0,102,20));
+            int size;
+            size = wsprintf(text,TEXT("%i"),pl_left_score);
+            TextOut(hdc,200,150,text,size);
+            size = wsprintf(text,TEXT("%i"),pl_right_score);
+            TextOut(hdc,800,150,text,size);
+            if(game_start==false)
+            {
+                TextOut(hdc,10,30,TEXT("Press Space to start/pause..."),28);
+                TextOut(hdc,10,45,TEXT("Press R to Restart..."),21);
+                TextOut(hdc,10,60,TEXT("Press o for single player..."),28);
+                TextOut(hdc,10,75,TEXT("Press m for single player..."),28);
+                if(pl_left_score > pl_right_score)
+                    TextOut(hdc,10,100,TEXT("PLAYER 1 WON"),12);
+                else if(pl_left_score < pl_right_score)
+                    TextOut(hdc,10,100,TEXT("PLAYER 2 WON"),12);
+
+            }
+            // centre net
+            brush = CreateHatchBrush(HS_DIAGCROSS,RGB(0,0,0));
+            SelectObject(hdc,brush);
+            Polygon(hdc,net,4);
+
+            EndPaint(handle,&pStruct);
+            break;
+        }
+        case WM_DESTROY:
+                PostQuitMessage (0);
+                exit(0);
+            break;
+        default:
+                return DefWindowProc (handle, msg, wParam, lParam);
+    }
+}
+// ******************************************************
+void MoveBall()
+{
+    hdc = GetDC(handle);
+
+    brush=CreateSolidBrush(RGB(255,250,255));
+    SelectObject(hdc,brush);
+    Ellipse(hdc,x_ball-ball_radius,y_ball-ball_radius,x_ball+ball_radius,y_ball+ball_radius); // ball
+
+    brush=CreateSolidBrush(RGB(70,51,0));
+    SelectObject(hdc,brush);
+    // 3d bat shapes
+    Ellipse(hdc,x_left-6,y_left-bat_size,x_left+12,y_left+bat_size);
+    Ellipse(hdc,x_right-12,y_right-bat_size,x_right+6,y_right+bat_size);
+    if(game_start == true)
+    {
+        UpdateBall();
+        CheckHit();
+    }
+    ReleaseDC(handle,hdc);
+}
+// ******************************************************
+void UpdateBall()
+{
+        if(angle == 45)
+        {
+            x_ball = x_ball + (speed * x_direction);
+            y_ball = y_ball + (speed * y_direction);
+        }
+        else // 60 degree
+        {
+            x_ball = x_ball + (speed * x_direction);
+            y_ball = y_ball + ((speed * y_direction)/10);
+        }
+    // to produce random numbers
+    if(multiplayer == false) // for single player to calculate right bat position
+    {
+        random_diff = rand()%100;
+        y_right = y_ball + random_diff;
+    }
+}
+// ******************************************************
+void CheckHit()
+{
+    if(x_ball >=0 && x_ball<=1000 && y_ball<=25) // top border
+    {
+        if(y_direction == 1)
+            y_direction = -1;
+        else
+            y_direction = 1;
+
+            // Play sound thread
+    hThread = CreateThread(NULL,0,PlayHitSound,(LPVOID)NULL,0,0);
+    CloseHandle(hThread);
+    // thread join
+
+    }
+    else if(x_ball>=0 && x_ball<=1000 && y_ball>=540) // bottom border
+    {
+        if(y_direction == 1)
+            y_direction = -1;
+        else
+            y_direction = 1;
+    // Play sound thread
+    hThread = CreateThread(NULL,0,PlayHitSound,(LPVOID)NULL,0,0);
+    CloseHandle(hThread);
+    // thread join
+    }
+    else if(x_ball<=x_left+ball_radius+5
+                && (y_ball >= y_left-bat_size)
+                && ( y_ball <=y_left+bat_size) ) // player 1 bat collision (left)
+    {
+        pl_left_score++;
+        if(x_direction == 1)
+            x_direction = -1;
+        else
+            x_direction =1;
+        if(y_ball < y_left)
+            y_direction = -1;
+        else
+            y_direction = 1;
+
+    // Play sound thread
+    hThread = CreateThread(NULL,0,PlayHitSound,(LPVOID)NULL,0,0);
+    CloseHandle(hThread);
+    // thread join
+        int diff = bat_size/3;
+        if((y_ball >= (y_left-diff/2)) && ( y_ball <=y_left+diff/2)) // 60 degree for centre bat collision
+
+            {
+                angle = 60;
+            }
+        else // collision with sides of bat
+
+            {
+                angle = 45;
+            }
+    }
+    else if(x_ball>=x_right-(ball_radius+5)
+            && (y_ball >= y_right-bat_size)
+            && (y_ball <= y_right+bat_size) )// player 2 (right)
+    {
+        pl_right_score++;
+        if(x_direction == 1)
+                x_direction = -1;
+        else
+                x_direction =1;
+        if(y_ball < y_right)
+            y_direction = -1;
+        else
+            y_direction = 1;
+    // Play sound thread
+    hThread = CreateThread(NULL,0,PlayHitSound,(LPVOID)NULL,0,0);
+    CloseHandle(hThread);
+    // thread join
+
+        int diff = bat_size/3;
+        if((y_ball >= (y_right-diff/2)) && ( y_ball <=y_right+diff/2)) // 90 degree centre bat
+
+            {
+                angle = 60;
+            }
+        else
+            {
+                angle = 45;
+            }
+    }
+    else if( x_ball < 4 ) // left player lost the game
+    {
+        game_start=false;
+        x_ball = 500;
+        y_ball = 300;
+    }
+    else if(x_ball >985) // right player lost the game
+    {
+        game_start=false;
+        x_ball = 500;
+        y_ball = 300;
+    }
+}
+// ******************************************************
+// thread to play hit sound
+DWORD WINAPI PlayHitSound(LPVOID lpParam)
+{
+    PlaySound(tick_sound,NULL,SND_SYNC);
+}
+// ******************************************************

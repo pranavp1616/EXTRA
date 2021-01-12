@@ -1,0 +1,452 @@
+// TEXT EDITOR USING WIN32 API
+
+#include<windows.h>
+#include<iostream>
+#include<fstream>
+#include<string>
+using namespace std;
+//GLOABAL VARIABLES
+int key_gap=7;                  // pixel gap between each letter
+int key_down_width = 17;        // pixel gap between each line in the text field
+int wind_x=800;                // window size x
+int wind_y=600;                 // window size y
+int wind_offset = 45;           // window border size offset
+int init_x=7;                   // inital x typing position to start
+int init_y = 32;                // inital y typing position to start
+int x_pos=init_x;               // current x position to type
+int y_pos=init_y;               // current y position to type
+bool alt_flag = false;          // true when alt is pressed else false
+int word_per_line=100;
+string buffer;                  // org buffer to store whole text
+string color_buffer;            // coresponding buffer text color is stored as r,b,g,k  k= BLACK
+string one_letter_width = "1ilfjr!*.,";  // letters with small pixel gap
+string three_letter_width="wm";
+int scroll_beg=0; // begining of buffer to bedisplayed on screen
+int scroll_end; // // end of buffer to bedisplayed on screen
+HDC hdc;
+HPEN pen = CreatePen(PS_SOLID,1,RGB(0,0,0));
+HBRUSH brush = CreateSolidBrush(RGB(0,0,0));
+COLORREF col = RGB(0,0,0); // text col
+COLORREF NoteBackCol = RGB(255,255,0); // background  color;
+PAINTSTRUCT paintstrct;
+// **************************************************************************
+
+// GLOBAL FUNCTIONS
+void CheckForBoundaryLimit();
+void PaintToolbar(HDC hdc);
+void PaintWholeBuffer(HDC hdc);
+void PaintBlinkCursor(HDC hdc);
+void ButtonAction(HWND handle,HDC hdc,LPARAM lParam,WPARAM wParam);
+void SaveFile();
+void ReadFile();
+char GetColorCode();
+void AssignNextReturn();
+void AssignPrevReturn();
+LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
+// **************************************************************************
+int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszArgs,int nCmdShow)
+{
+    HWND hwnd;
+    MSG messages;
+    WNDCLASS wincl;
+
+    wincl.hInstance = hInstance;
+    wincl.lpszClassName = TEXT("notes");
+    wincl.lpfnWndProc = WindowProcedure;
+    wincl.style = CS_HREDRAW;
+    wincl.hIcon =  LoadIcon(NULL,IDI_INFORMATION);
+    wincl.hCursor = LoadCursor(NULL,IDC_IBEAM);
+    wincl.lpszMenuName = NULL;
+    wincl.cbClsExtra = 0;
+    wincl.cbWndExtra = 0;
+    wincl.hbrBackground =  (HBRUSH) CreateSolidBrush(NoteBackCol);;
+
+    if(!RegisterClass(&wincl))
+    {
+
+          return 0;
+    }
+    hwnd = CreateWindow (
+           TEXT("notes"),
+           TEXT("Notes"),
+          WS_OVERLAPPEDWINDOW,
+           100,
+           100,
+           wind_x,
+           wind_y,
+           NULL,
+           NULL,
+           hInstance,
+           NULL
+           );
+
+    ShowWindow (hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+
+    while (GetMessage (&messages, NULL, 0, 0))
+    {
+        TranslateMessage(&messages);
+        DispatchMessage(&messages);
+    }
+    return messages.wParam;
+}
+
+// ************************************
+LRESULT CALLBACK WindowProcedure(HWND handle, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_CREATE:
+        {
+            buffer = "";
+            color_buffer = "";
+            x_pos = init_x;
+            y_pos = init_y;
+            break;
+        }
+        case WM_LBUTTONDOWN:
+            {
+                hdc = GetDC(handle);
+                ButtonAction(handle,hdc,lParam,wParam);
+                ReleaseDC(handle,hdc);
+                break;
+            }
+        case WM_SYSKEYDOWN:
+            {
+                if(LOWORD(wParam)==VK_MENU) // alt for shortcuts
+                    alt_flag = true;
+
+                if(LOWORD(wParam) == VK_F4 && alt_flag==true) // alt + f4 = close
+                    SendMessage(handle,WM_CLOSE,NULL,NULL);
+                break;
+            }
+        case WM_SYSKEYUP:
+            {
+                if(LOWORD(wParam)==VK_MENU) // alt released
+                    alt_flag = false;
+                break;
+            }
+        case WM_KEYDOWN:
+            {
+                if(LOWORD(wParam) == VK_DOWN) // down arrow
+                {
+                    AssignNextReturn();
+                    InvalidateRect(handle,NULL,true);
+                }
+                else if(LOWORD(wParam) == VK_UP)
+                {
+                    AssignPrevReturn();
+                    InvalidateRect(handle,NULL,true);
+                }
+                cout<<"Scrol beg : "<<scroll_beg;
+                cout<<"Scroll end : "<<scroll_end<<endl;
+                break;
+            }
+
+        case WM_SIZE:
+            {
+                InvalidateRect(handle,NULL,true);
+                break;
+            }
+         case WM_CHAR:
+        {
+                InvalidateRect(handle,NULL,true);
+
+                hdc = GetDC(handle);
+                char ch = LOWORD(wParam);
+                if(ch== VK_ESCAPE) // quit
+                {
+                    SendMessage(handle,WM_CLOSE,wParam,lParam);
+                }
+                else if(ch== VK_RETURN) // enter
+                {
+                    buffer = buffer + '\n';
+                    char temp = color_buffer[color_buffer.size()-1];
+                    color_buffer = color_buffer + temp;
+                }
+                else if(ch == 19) // ctrl + s -> save file == 19
+                {
+                    SaveFile();
+                }
+                else if(ch == 12) // ctrl + l -> load file == 12
+                {
+                    ReadFile();
+                }
+                else if(ch== VK_BACK && buffer.empty()==false) // backspace
+                {
+                    ch=buffer[buffer.size()-1]; // last character in string to be erased
+                    buffer.erase(buffer.size()-1);
+                    color_buffer.erase(color_buffer.size()-1);
+                }
+                else
+                {
+                    buffer = buffer + ch;
+                    char col_temp = GetColorCode();
+                    color_buffer = color_buffer + col_temp;
+                }
+                scroll_end=buffer.size();
+                break;
+            }
+    case WM_PAINT:
+        {
+            hdc =BeginPaint(handle,&paintstrct);
+            PaintToolbar(hdc);
+            PaintWholeBuffer(hdc);
+            PaintBlinkCursor(hdc);
+            EndPaint(handle,&paintstrct);
+            break;
+        }
+    case WM_CLOSE:
+        {
+            int msgId = MessageBox(handle,TEXT("Do you want to save unchanges?"),"Notes",MB_YESNOCANCEL);
+            if(msgId == IDNO)
+            {
+                PostQuitMessage(0);
+            }
+            else if(msgId == IDYES)
+            {
+                SaveFile();
+            }
+            else
+                break;
+        }
+          default:
+                return DefWindowProc (handle, msg, wParam, lParam);
+    }
+}
+
+// **************************************************************************
+void CheckForBoundaryLimit()
+{
+    if(x_pos >= (wind_x-wind_offset))
+    {
+        x_pos=init_x;
+        y_pos+=key_down_width;
+    }
+}
+// **************************************************************************
+void PaintToolbar(HDC hdc)
+{
+            brush = CreateSolidBrush(NoteBackCol);
+            SelectObject(hdc,brush);
+            Rectangle(hdc,0,0,wind_x,wind_y); // repainting all client area
+
+            brush = CreateSolidBrush(RGB(255,255,255));
+            SelectObject(hdc,brush);
+            Rectangle(hdc,0,0,wind_x-18,30); // toolbar
+
+            Rectangle(hdc,5,5,60,25); // Load button
+            TextOut(hdc,15,7,TEXT("Load"),4);
+
+            Rectangle(hdc,70,5,125,25);  // save button
+            TextOut(hdc,80,7,TEXT("Save"),4);
+
+            Rectangle(hdc,135,5,190,25); // copy button
+            TextOut(hdc,145,7,TEXT("Copy"),4);
+
+            Rectangle(hdc,600,5,655,25);  // clear button
+            TextOut(hdc,610,7,TEXT("Clear"),5);
+
+            TextOut(hdc,230,7,TEXT("COLOR:"),6); // COLOR TEXT
+
+            brush = CreateSolidBrush(RGB(255,0,0));  // RED
+            SelectObject(hdc,brush);
+            Rectangle(hdc,320,5,340,25);
+
+            brush = CreateSolidBrush(RGB(0,255,0)); // GREEN
+            SelectObject(hdc,brush);
+            Rectangle(hdc,350,5,370,25);
+
+
+            brush = CreateSolidBrush(RGB(0,0,255)); // blue
+            SelectObject(hdc,brush);
+            Rectangle(hdc,380,5,400,25);
+
+
+            brush = CreateSolidBrush(RGB(0,0,0)); // black
+            SelectObject(hdc,brush);
+            Rectangle(hdc,410,5,430,25);
+
+}
+// **************************************************************************
+void PaintWholeBuffer(HDC hdc)
+{
+                    x_pos=init_x;
+                    y_pos=init_y;
+                    int size = buffer.size();
+                    SetBkColor(hdc,NoteBackCol);
+                    for(int i=scroll_beg;i<=scroll_end;i++)
+                    {
+                        // checking for constraints from buffer
+                        if(buffer[i]=='\n')
+                        {
+                            y_pos+=key_down_width;
+                            x_pos=init_x;
+                        }
+                        CheckForBoundaryLimit();
+                        // assigncolor
+                        if(color_buffer[i] == 'r') // RED
+                        {
+                            col = RGB(255,0,0);
+                        }
+                        else if(color_buffer[i]=='g') // GREEN
+                        {
+                            col = RGB(0,255,0);
+                        }
+                        else if(color_buffer[i]=='b' ) // BLUE
+                        {
+                            col = RGB(0,0,255);
+                        }
+                        else if( color_buffer[i]=='k') // BLACK
+                        {
+                            col = RGB(0,0,0);
+                        }
+
+                        SetTextColor(hdc,col);
+                        GetCharWidth(hdc,buffer[i],buffer[i],&key_gap);
+                        TextOut(hdc,x_pos,y_pos,&buffer[i],1);
+                        x_pos+=key_gap;
+                    } // end of for loop
+
+}
+// **************************************************************************
+void ButtonAction(HWND handle,HDC hdc,LPARAM lParam,WPARAM wParam)
+{
+                int x = LOWORD(lParam);
+                int y = HIWORD(lParam);
+
+                if( x>=320 && x<=340 && y>=5 && y<=25)
+                {
+                    col = RGB(255,0,0);
+                    TextOut(hdc,285,7,TEXT("red"),3);
+                }
+                else if( x>=350 && x<=370 && y>=5 && y<=25)
+                {
+                     col = RGB(0,255,0);
+                    TextOut(hdc,285,7,TEXT("green"),5);
+                }
+                else if( x>=380 && x<=400 && y>=5 && y<=25)
+                {
+                     col = RGB(0,0,255);
+                    TextOut(hdc,285,7,TEXT("blue"),4);
+                }
+                else if( x>=410 && x<=430 && y>=5 && y<=25)
+                {
+                    col = RGB(0,0,0);
+                    TextOut(hdc,285,7,TEXT("black"),5);
+
+                }
+                else if( x>=5 && x<=60 && y>=5 && y<=25) // Load button
+                {
+                    ReadFile();
+                    InvalidateRect(handle,NULL,true);
+                }
+                else if( x>=70 && x<=125 && y>=5 && y<=25) // save button
+                {
+                    SaveFile();
+                    InvalidateRect(handle,NULL,true);
+                }
+                else if( x>=600 && x<=655 && y>=5 && y<=25) // clear button
+                {
+                        buffer=""; // empty string
+                        SelectObject(hdc,CreateSolidBrush(NoteBackCol));
+                        Rectangle(hdc,0,0,wind_x,wind_y);
+                        PaintToolbar(hdc);
+                        return;
+                }
+
+}
+// **************************************************************************
+void SaveFile()
+{
+    ofstream fout,fout2;
+    fout.open("Data.txt",ios::out);
+    fout2.open("Color.txt",ios::out);
+    int size = buffer.size();
+    int i=0;
+    while(i<size)
+    {
+        fout<<buffer[i];
+        fout2<<color_buffer[i];
+        i++;
+    }
+    fout.seekp(0);
+    fout2.close();
+    fout.close();
+}
+// **************************************************************************
+void ReadFile()
+{
+    ifstream fin,fin2;
+    fin.open("Data.txt",ios::in);
+    fin2.open("Color.txt",ios::in);
+    char ch;
+    buffer = "";
+    color_buffer="";
+    while(!fin.eof())
+    {
+        fin>>ch;
+        buffer = buffer + ch;
+        fin2>>ch;
+        color_buffer = color_buffer + ch;
+    }
+    buffer.erase(buffer.size()-1); //delete extra letter added
+    fin.close();
+    fin2.close();
+}
+// **************************************************************************
+void PaintBlinkCursor(HDC hdc)
+{
+    brush = CreateSolidBrush(col);
+    SelectObject(hdc,brush);
+    Rectangle(hdc,x_pos+key_gap,y_pos+3,x_pos+key_gap+6,y_pos+15);
+}
+// **************************************************************************
+char GetColorCode()
+{
+                if(col == RGB(255,0,0)) // RED
+                    {
+                        return 'r';
+                    }
+                    else if(col == RGB(0,255,0)) // GREEN
+                    {
+                        return 'g';
+                    }
+                    else if( col == RGB(0,0,255)) // BLUE
+                    {
+                        return 'b';
+                    }
+                    else if( col == RGB(0,0,0)) // BLACK
+                    {
+                        return 'k';
+                    }
+    return '0';
+}
+
+void AssignPrevReturn()
+{
+    int size = buffer.size();
+    for(int i=scroll_beg-1;i>=0;i--)
+    {
+        if(buffer[i]=='\n')
+        {
+            scroll_beg=i;
+            return;
+        }
+    }
+    scroll_beg = 0;
+}
+void AssignNextReturn()
+{
+    int size = buffer.size();
+    for(int i=scroll_beg+1;i<size;i++)
+    {
+        if(buffer[i]=='\n')
+        {
+            scroll_beg=i;
+            return;
+        }
+    }
+    scroll_beg = size;
+}
+// **************************************************************************

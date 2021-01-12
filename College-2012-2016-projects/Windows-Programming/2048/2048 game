@@ -1,0 +1,429 @@
+#include<windows.h>
+#include<string>
+#include<iostream>
+#include<stdlib.h>
+using namespace std;
+
+LRESULT CALLBACK WindowProcedure(HWND,UINT,WPARAM,LPARAM);
+
+// Global Variables
+int buffer[4][4]={0};
+int score = 0;
+int best;
+int border_offset = 10;
+bool flag=true;
+HWND handle;
+HBRUSH color[7];
+HDC hdc;
+void PaintBuffer(HDC hdc);
+void DrawSquares(HDC hdc,int i,int j);
+void UpMove();
+void DownMove();
+void RightMove();
+void LeftMove();
+void ShiftRight(int i);
+void ShiftLeft(int i);
+void ShiftUp(int j);
+void ShiftDown(int j);
+void GenerateNumbers();
+void CheckWon();
+void InitColors();
+void UpdateScore();
+int WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpszArgs,int nCmdShow)
+{
+    MSG messages;
+    WNDCLASS wincl;
+    InitColors();
+    wincl.hInstance = hInstance;
+    wincl.lpszClassName = TEXT("2048");
+    wincl.lpfnWndProc = WindowProcedure;
+    wincl.style = CS_HREDRAW;
+    wincl.hIcon =  LoadIcon(NULL,IDI_ERROR);
+    wincl.hCursor = LoadCursor(NULL,IDC_CROSS);
+    wincl.lpszMenuName = NULL;
+    wincl.cbClsExtra = 0;
+    wincl.cbWndExtra = 0;
+    wincl.hbrBackground = color[1];
+
+if(!RegisterClass(&wincl))
+    {
+        cout<<"wincl not registed";
+          return 0;
+    }
+    handle = CreateWindow (
+           TEXT("2048"),
+           TEXT("2048"),
+          WS_OVERLAPPEDWINDOW,
+           100,
+           100,
+           426,
+           550,
+           NULL,
+           NULL,
+           hInstance,
+           NULL
+           );
+
+    ShowWindow (handle, nCmdShow);
+    UpdateWindow(handle);
+
+    while (GetMessage (&messages, NULL, 0, 0))
+    {
+        TranslateMessage(&messages);
+        DispatchMessage(&messages);
+    }
+    return messages.wParam;
+}
+
+LRESULT CALLBACK WindowProcedure(HWND handle, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+
+    switch (msg)
+    {
+        case WM_CREATE:
+        {
+
+            GenerateNumbers();
+            break;
+        }
+        case WM_KEYDOWN:
+        {
+            if(LOWORD(wParam)==27)
+            {
+                PostQuitMessage(WM_DESTROY);
+            }
+            else if(LOWORD(wParam) == VK_UP)
+            {
+                UpMove();
+                UpdateScore();
+            }
+            else if(LOWORD(wParam) == VK_DOWN)
+            {
+                DownMove();
+                UpdateScore();
+            }
+            else if(LOWORD(wParam) == VK_LEFT)
+            {
+                LeftMove();
+                UpdateScore();
+            }
+            else if(LOWORD(wParam) == VK_RIGHT)
+            {
+                RightMove();
+                UpdateScore();
+            }
+            GenerateNumbers();
+            CheckWon();
+            InvalidateRect(handle,NULL,true);
+            break;
+
+        }
+        case WM_PAINT:
+        {
+            PAINTSTRUCT p;
+            RECT rect;
+            GetClientRect(handle,&rect);
+
+            hdc = BeginPaint(handle,&p);
+            PaintBuffer(hdc);
+            EndPaint(handle,&p);
+
+            break;
+          }
+        case WM_CLOSE:
+            {
+                int m = MessageBoxA(handle,TEXT("Saved!!!"),TEXT("Quit"),MB_OK);
+            }
+          case WM_DESTROY:
+                PostQuitMessage (0);
+            break;
+
+          default:
+                return DefWindowProc (handle, msg, wParam, lParam);
+    }
+}
+
+void PaintBuffer(HDC hdc)
+{
+    SelectObject(hdc,color[0]);
+    Rectangle(hdc,0,100,400+border_offset,500+border_offset);
+
+    SetBkColor(hdc,RGB(205,193,181));
+    TCHAR text[50];
+    int size = wsprintf(text,TEXT("SCORE : %i"),score);
+    TextOut(hdc,25,25,text,size);
+    size = wsprintf(text,TEXT("BEST : %i"),best);
+    TextOut(hdc,300,25,text,size);
+    TextOut(hdc,25,60,TEXT("Join the numbers and get to the 2048 tile!"),42);
+
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            DrawSquares(hdc,i,j);
+        }
+    }
+}
+void UpMove()
+{
+    for(int j=0; j<4;j++)
+   {
+       for(int i=0; i<3 ;i++) // goes till 1 not zero
+       {
+            if(buffer[i][j] == buffer[i+1][j] && buffer[i][j]!=0)
+            {
+                buffer[i+1][j] = (buffer[i][j] + buffer[i+1][j]);
+                buffer[i][j]  = 0;
+                flag = true;
+            }
+            else
+                flag = false;
+       }
+       ShiftUp(j);
+   }
+}
+void DownMove()
+{
+
+    for(int j=0; j<4;j++)
+   {
+       for(int i=2; i>=0 ;i--) // goes till 1 not zero
+       {
+            if(buffer[i][j] == buffer[i+1][j] && buffer[i][j]!=0)
+            {
+                buffer[i+1][j] = (buffer[i][j] + buffer[i+1][j]);
+                buffer[i][j]  = 0;
+                flag = true;
+            }
+            else
+                flag = false;
+       }
+       ShiftDown(j);
+   }
+}
+void LeftMove()
+{
+
+   for(int i=0;i<4;i++)
+   {
+        // multiply same numbers
+        for(int j=0;j<3;j++)
+        {
+            if(buffer[i][j]!=0 && (buffer[i][j] == buffer[i][j+1]))
+            {
+                buffer[i][j+1] = (buffer[i][j] + buffer[i][j+1]);
+                buffer[i][j]=0;
+                flag = true;
+            }
+            else
+                flag = false;
+        }
+        ShiftLeft(i);
+    }
+
+}
+void RightMove()
+{
+   for(int i=0;i<4;i++)
+   {
+        // multiply same numbers
+        for(int j=2;j>=0;j--)
+        {
+            if(buffer[i][j]!=0 && (buffer[i][j] == buffer[i][j+1]))
+            {
+                buffer[i][j+1] = (buffer[i][j] + buffer[i][j+1]);
+                buffer[i][j]=0;
+                flag = true;
+            }
+            else
+                flag = false;
+        }
+        ShiftRight(i);
+    }
+}
+void ShiftRight(int i)
+{
+        for(int k=0;k<4;k++)
+            {
+                for(int r=0;r<3;r++)
+                {
+                    if(buffer[i][r]!=0 && buffer[i][r+1]==0)
+                        {
+                            buffer[i][r+1]=buffer[i][r];
+                            buffer[i][r]=0;
+                        }
+                }
+            }
+}
+void ShiftLeft(int i)
+{
+    for(int k=0;k<4;k++)
+            {
+                for(int r=0;r<3;r++)
+                {
+                    if(buffer[i][r]==0 && buffer[i][r+1]!=0)
+                        {
+                            buffer[i][r]=buffer[i][r+1];
+                            buffer[i][r+1]=0;
+                        }
+                }
+            }
+}
+void ShiftUp(int j)
+{
+    for(int k=0;k<4;k++)
+            {
+                for(int r=0;r<3;r++)
+                {
+                    if(buffer[r][j]==0 && buffer[r+1][j]!=0)
+                        {
+                            buffer[r][j]=buffer[r+1][j];
+                            buffer[r+1][j]=0;
+                        }
+                }
+            }
+}
+void ShiftDown(int j)
+{
+    for(int k=0;k<4;k++)
+            {
+                for(int r=0;r<3;r++)
+                {
+                    if(buffer[r][j]!=0 && buffer[r+1][j]==0)
+                        {
+                            buffer[r+1][j]=buffer[r][j];
+                            buffer[r][j]=0;
+                        }
+                }
+            }
+}
+void GenerateNumbers()
+{
+
+    int k=0,r=0;
+    int temp_i[16],temp_j[16];
+    // get all vacant places's i and j
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            if(buffer[i][j]== 0)
+            {
+                temp_i[k++] = i;
+                temp_j[r++] = j;
+            }
+        }
+    }
+    int max_size;
+
+    if(k>r)
+        max_size = k;
+    else
+        max_size = r;
+
+    int pos = rand()%max_size; // select from temp_i
+    int num = rand()%2;
+    if(num==0)
+        num = 2;
+    else
+        num = 4;
+    buffer[temp_i[pos]][temp_j[pos]] = num;
+}
+void CheckWon()
+{
+    bool vacant_flag=false;
+    for(int i=0;i<4;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            if(buffer[i][j] == 2048)
+            {
+                cout<<"\nWon\n";
+            }
+
+            if(buffer[i][j] == 0)
+                vacant_flag = true;
+        }
+    }
+    if(flag == false && vacant_flag == false ) // no vacancies and no moves next
+    {
+        TextOut(hdc,200,300,TEXT("Lose!!!"),10);
+        SendMessage(handle,WM_CLOSE,NULL,NULL);
+    }
+}
+void DrawSquares(HDC hdc,int i,int j)
+{
+    if(buffer[i][j] == 0)
+        {
+            SelectObject(hdc,color[1]);
+            SetBkColor(hdc,RGB(205,193,181));
+        }
+    else if(buffer[i][j] == 2 || buffer[i][j] == 128 )
+        {
+            SelectObject(hdc,color[2]);
+            SetBkColor(hdc,RGB(238,228,218));
+        }
+    else if(buffer[i][j] == 4 || buffer[i][j] == 512)
+        {
+            SelectObject(hdc,color[3]);
+            SetBkColor(hdc,RGB(242,177,121));
+        }
+    else if(buffer[i][j] == 8 || buffer[i][j] == 1024)
+        {
+            SelectObject(hdc,color[4]);
+            SetBkColor(hdc,RGB(245,149,101));
+        }
+    else if(buffer[i][j] == 16 || buffer[i][j] == 2048)
+        {
+            SelectObject(hdc,color[5]);
+            SetBkColor(hdc,RGB(246,93,59));
+        }
+    else if(buffer[i][j] == 32 )
+        {
+            SelectObject(hdc,color[6]);
+            SetBkColor(hdc,RGB(237,206,113));
+        }
+    else if(buffer[i][j] == 64 )
+        {
+            SelectObject(hdc,color[7]);
+            SetBkColor(hdc,RGB(236,200,80));
+        }
+    int x,y;
+    x = (j)*100;
+    y = (i+1)*100;
+    RoundRect(hdc,x+border_offset,y+border_offset,x+100,
+              y+100,3,3);
+
+    TCHAR text[6];
+    int size = wsprintf(text,TEXT(" %i "),buffer[i][j]);
+            if(buffer[i][j]!=0)
+                TextOut(hdc,x+50,y+50,text,size);
+}
+void InitColors()
+{
+
+// grey
+            color[0] = CreateSolidBrush(RGB(186,174,160));// bk
+            color[1] = CreateSolidBrush(RGB(205,193,181)); // 0
+            color[2]= CreateSolidBrush(RGB(238,228,218)); // 2 , 4
+            //orange
+            color[3] =  CreateSolidBrush(RGB(242,177,121)); // 8 16
+            // dark orange
+            color[4] = CreateSolidBrush(RGB(245,149,101)); // 32 64
+            // red
+            color[5] =  CreateSolidBrush(RGB(246,93,59)); // 128 246
+            // yellow
+            color[6] = CreateSolidBrush(RGB(237,206,113)); // 512 1024
+            // dark yellow
+            color[7] = CreateSolidBrush(RGB(236,200,80));
+
+
+}
+void UpdateScore()
+{
+    int num = rand()%10 + 50;
+    score+=num;
+
+    if(score> best)
+        best = score;
+}

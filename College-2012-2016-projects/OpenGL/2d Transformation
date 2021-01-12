@@ -1,0 +1,285 @@
+// ***********************************************
+// -lm -lglut -lGLU -lGL
+
+//     Draw the shape (Click 4 points)
+
+//     press 'e' to translate
+//     press 'r' to rotate
+//     press 't' to scale
+
+//     press 'w' for up
+//     press 's' for down
+//     press 'a' for left
+//     press 'd' for right
+//
+        
+// ***********************************************
+
+#include <stdio.h>
+#include <math.h>
+#include <GL/glut.h>
+
+
+typedef struct
+{
+        GLint x;
+        GLint y;
+} GLPOINT;
+
+
+static int wHeight = 0;
+static GLPOINT p[4]; // points array for basic shape drawn
+static int tool;  // tool selected = w , e , r  
+
+static int tx,ty,sx,sy,theta; // transformation parameters
+
+// open gl functions
+void DisplayFunc();
+void MouseFunc(int button,int state,int x,int y);
+void KeyboardFunc(unsigned char key,int x,int y);
+void Init();
+
+// algo functions
+
+void SetPixel(int x,int y);
+void DrawShape();
+
+void Translate(int x,int y);
+void Rotate(float x);
+void Scale(int x,int y);
+
+void Redraw();
+
+int main(int argc,char* argv[])
+{
+        glutInit(&argc,argv);
+        glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+        glutInitWindowPosition(100,100);
+        glutInitWindowSize(600,600);
+        glutCreateWindow("Translation");
+        
+        wHeight = glutGet(GLUT_WINDOW_HEIGHT);
+        
+        glutDisplayFunc(DisplayFunc);
+        glutMouseFunc(MouseFunc);
+        glutKeyboardFunc(KeyboardFunc);
+        
+        Init();
+        glutMainLoop();
+        return 0;
+        
+}
+
+
+void MouseFunc(int button,int state,int x,int y)
+{
+        static int click_count;
+        
+        if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+        {
+                p[click_count].x=x;
+                p[click_count].y=wHeight-y;
+                click_count++;
+        }
+        if(click_count==4)
+        {
+                DrawShape();
+                click_count=0;
+        }
+}
+void KeyboardFunc(unsigned char key,int x,int y)
+{
+        if(key=='e') // translate
+        {
+                tool = 1;
+        }
+        else if(key == 'r') // rotate
+        {
+                tool = 2;
+        }
+        else if(key == 't') // scale
+        {
+                tool = 3;
+        }
+        
+        else if(key == 'w') // up 
+        {
+                // translate
+                        tx=0;
+                        ty=10;
+                // rotate
+                        theta=10;
+                //scale
+                        sx=1;
+                        sy=2;
+                        
+                Redraw();  
+        }
+        else if(key == 's') // down
+        {
+        
+                // translate
+                        tx=0;
+                        ty=-10;
+                // rotate
+                        theta=-10;
+                //scale
+                        sx=1;
+                        sy=-2;
+                        
+                Redraw(); 
+        }
+        else if(key == 'a')  // left
+        {
+        
+                // translate
+                        tx=-10;
+                        ty=0;
+                // rotate
+                        theta=10;
+                //scale
+                        sx=-2;
+                        sy=1;
+                        
+                Redraw();  
+        }
+        else if(key == 'd') // right
+        {
+        
+                // translate
+                        tx=10;
+                        ty=0;
+                // rotate
+                        theta=-10;
+                //scale
+                        sx=2;
+                        sy=1;
+                        
+                Redraw();  
+        } 
+        else 
+                tool = 0;      
+        
+}
+
+
+
+void DisplayFunc()
+{
+        glClear(GL_COLOR_BUFFER_BIT);
+	glFlush();
+}
+
+void Init()
+{
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0,600, 0.0, 600);
+	
+}
+
+void DrawShape()
+{
+        glColor3f(0,1,0);
+        glBegin(GL_POLYGON);
+        
+                glVertex2i(p[0].x,p[0].y);
+                glVertex2i(p[1].x,p[1].y);
+                glVertex2i(p[2].x,p[2].y);
+                glVertex2i(p[3].x,p[3].y);
+        glEnd();
+        glFlush();
+}
+
+void SetPixel(int x,int y)
+{
+        glColor3f(0,0,0);
+        glBegin(GL_POINTS);
+                glVertex2i(x,y);
+        glEnd();
+        glFlush();
+        
+        
+}
+
+void Translate(int x,int y)
+{
+        int i;
+        for(i=0;i<4;i++)
+        {
+                p[i].x = p[i].x + x;
+                p[i].y = p[i].y + y;
+        }
+}
+void Rotate(float x)
+{
+        // change x in degree to radiun
+        
+        x = x*3.14/180;
+        
+        // rotate w.r.t center of shape
+        // calculate xt,yt as fixed point
+        
+        
+        int xt = (p[0].x + p[2].x)/2;
+        int yt = (p[0].y + p[2].y)/2;
+        
+        
+        int i;
+        float tmp_x,tmp_y;
+        float cos_x = cos(x);
+        float sin_x = sin(x);
+        
+        for(i=0;i<4;i++)
+        {
+                tmp_x = xt +  ( (p[i].x - xt)*cos_x  - (p[i].y - yt) *sin_x);
+                tmp_y = yt + (  (p[i].x - xt)*sin_x  + (p[i].y - yt) *cos_x);
+        
+                p[i].x = tmp_x;
+                p[i].y = tmp_y;
+                
+        }
+}
+void Scale(int x,int y)
+{
+
+         // scale w.r.t center of shape
+        // calculate xt,yt as fixed point
+        
+        
+        int xt = (p[0].x + p[2].x)/2;
+        int yt = (p[0].y + p[2].y)/2;
+        
+       
+        int i;
+        for(i=0;i<4;i++)
+        {
+                p[i].x = (p[i].x * x)  + xt*(1-x);
+                p[i].y = (p[i].y * y)  + yt*(1-y);
+        }
+}
+
+void Redraw()
+{
+                
+                if(tool == 1) // translate
+                {
+                        Translate(tx,ty);
+                }
+                else if(tool == 2) // rotate
+                {
+                        Rotate(theta);
+                }
+                else if(tool ==3) // scale
+                {
+                        Scale(sx,sy);
+                }
+                
+                glClear(GL_COLOR_BUFFER_BIT);
+                DrawShape();
+}
+
+
+
+

@@ -1,0 +1,99 @@
+create table bus
+(
+	bus_id varchar(10) PRIMARY KEY,
+	bus_name varchar(50),
+	from_place varchar(50),
+	to_place varchar(50),
+	DateOfJourney date,
+	Departure_Time time,
+	Arrival_Time time,
+	Fare float,
+	bus_type varchar(10),
+	Traveller varchar(50),
+	Seats_booked int,
+	Route varchar(50)
+);
+
+
+create table bank
+(
+	username varchar(50)PRIMARY KEY,
+	password varchar(50),
+	account_number varchar(50) UNIQUE,
+	amount float
+);
+
+create table ticket
+(
+	ticket_id varchar(50) PRIMARY KEY,
+	bus_id varchar(50) references bus(bus_id),
+	person_name varchar(50),
+	phone varchar(50),
+	address varchar(50),
+	seat_no int,
+	username varchar(50) references bank(username),
+	account_number varchar(50) references bank(account_number)
+);
+
+
+// data insertion
+insert into bank (username,password,account_number,amount) values ('pranav','12345','1',15000);
+insert into bank (username,password,account_number,amount) values ('amrit','12345','2',24000);
+insert into bank (username,password,account_number,amount) values ('roopak','12345','3',33000);
+insert into bank (username,password,account_number,amount) values ('jaimon','12345','4',40000);
+insert into bank (username,password,account_number,amount) values ('aravind','12345','5',50000);
+insert into bank (username,password,account_number,amount) values ('santhosh','12345','6',30000);
+
+
+
+
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('1','kallada','kayamkullam','banglore','2015-05-23','18:00','6:00',1000,'AC','Suresh Kalada',0,'Cochin');
+
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('2','RedBus','kayamkullam','banglore','2015-05-24','20:00','8:30',1500,'AC','Redbus Co',0,'Coimbatore');
+
+
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('3','Kallada','Cochin','banglore','2015-05-24','23:00','7:00',750,'NON-AC','Redbus Co',0,'Kozhikode');
+
+
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('4','Kallada','Cochin','banglore','2015-05-24','23:00','7:00',750,'AC','Suresh Kallada',0,'Kozhikode');
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('5','Redbus','Cochin','banglore','2015-05-24','23:30','7:00',750,'NON-AC','Redbus Co',0,'Kozhikode');
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('6','Kallada','Cochin','banglore','2015-05-25','20:00','7:00',750,'NON-AC','Redbus Co',0,'Kozhikode');
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('7','Redbus','Cochin','banglore','2015-05-25','20:30','7:00',750,'AC','Redbus Co',0,'Kozhikode');
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('8','Kallada','Cochin','banglore','2015-05-26','20:00','7:00',750,'AC','Redbus Co',0,'Kozhikode');
+
+insert into bus 
+(bus_id,bus_name,from_place,to_place,dateofjourney,departure_time,arrival_time,fare,bus_type,traveller,seats_booked,route) 
+values 
+('9','Redbus','Cochin','banglore','2015-05-26','20:30','7:00',750,'NON-AC','Redbus Co',0,'Kozhikode');
