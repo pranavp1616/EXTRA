@@ -1,2 +1,1 @@
-# Misc
-Interesting program/code
+# Interesting code and old projects
